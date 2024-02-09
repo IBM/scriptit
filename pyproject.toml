@@ -2,7 +2,7 @@
 requires = ["setuptools>=60", "setuptools-scm>=8.0"]
 
 [project]
-name = "scriptit"
+name = "script-it"
 dynamic = ["version"]
 description = "Python utilities for writing interactive terminal applications"
 license = {text = "MIT"}
