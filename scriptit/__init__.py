@@ -4,12 +4,4 @@ in a uinx terminal.
 """
 
 # Local
-from .term_utils import (
-    Colors,
-    ascii_box,
-    ascii_table,
-    bg_colorize,
-    colorize,
-    decolorize,
-    progress_bar,
-)
+from . import color, shape
