@@ -4,4 +4,4 @@ in a uinx terminal.
 """
 
 # Local
-from . import color, shape
+from . import color, shape, size
