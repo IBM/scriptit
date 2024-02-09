@@ -32,7 +32,7 @@ jobs:
 
     - name: Upload to PyPI
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: pypa/gh-action-pypi-publish@v1
+      uses: pypa/gh-action-pypi-publish@main
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
