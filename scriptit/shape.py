@@ -2,23 +2,15 @@
 Utilities for working with a terminal
 """
 
-# Standard
 from typing import Any, List, Optional, Tuple
 import shutil
-
-# Local
 from .color import decolorize
 
-## Public ######################################################################
-
-
-def progress_bar(
-    complete_pct: float,
-    width: Optional[int] = None,
-    done_char: str = "=",
-    undone_char: str = "-",
-    head_char: str = ">",
-) -> str:
+def progress_bar(complete_pct: float,
+                 width: Optional[int] = None,
+                 done_char: str = "=",
+                 undone_char: str = "-",
+                 head_char: str = ">") -> str:
     """Format a progress bar showing the given percent complete with the given
     total width
 
@@ -41,10 +33,12 @@ def progress_bar(
         width = shutil.get_terminal_size().columns
     n_done = int((width - 3) * complete_pct)
     n_undone = width - 3 - n_done
-    return "[{}{}{}]".format(done_char * n_done, head_char, undone_char * n_undone)
+    return f"[{done_char * n_done}{head_char}{undone_char * n_undone}]"
 
 
-def box(x: Any, char: str = "#", width: Optional[int] = None) -> str:
+def box(x: Any,
+        char: str = "#",
+        width: Optional[int] = None) -> str:
     """Render the content of the given string inside a box frame
 
     Args:
@@ -66,22 +60,20 @@ def box(x: Any, char: str = "#", width: Optional[int] = None) -> str:
         sublines, longest_subline_len = _word_wrap_to_len(line, max_len)
         lines += sublines
         longest = max(longest, longest_subline_len)
-    out = "{}\n".format(char * (longest + 4))
+    out = f"{char * (longest + 4)}\n"
     for line in lines:
         padding = " " * (longest - _printed_len(line))
         out += f"{char} {line}{padding} {char}\n"
-    out += "{}\n".format(char * (longest + 4))
+    out += f"{char * (longest + 4)}\n"
     return out
 
 
-def table(
-    columns: List[List[Any]],
-    width: Optional[int] = None,
-    max_width: Optional[int] = None,
-    min_width: Optional[int] = None,
-    row_dividers: bool = True,
-    header: bool = True,
-) -> str:
+def table(columns: List[List[Any]],
+          width: Optional[int] = None,
+          max_width: Optional[int] = None,
+          min_width: Optional[int] = None,
+          row_dividers: bool = True,
+          header: bool = True) -> str:
     """Encode the given columns as an ascii table
 
     Args:
@@ -104,26 +96,21 @@ def table(
     if min_width is None:
         min_width = 2 * len(columns) + 1 if width is None else width
 
-    # Stringify all column content
     columns = [[str(val) for val in col] for col in columns]
 
-    # Determine the raw max width of each column
     max_col_width = max_width - 3 - 2 * (len(columns) - 1)
     widths = [
         min(max(_printed_len(x) for x in column), max_col_width) for column in columns
     ]
 
-    # Determine the full width of the table
     total_width = sum([w + 3 for w in widths]) + 1
     table_width = max(min(total_width, max_width), min_width)
     usable_table_width = table_width - 1
 
-    # For each column, determine the width as a percentage of the total width
     pcts = [float(w) / float(total_width) for w in widths]
     col_widths = [int(p * usable_table_width) + 3 for p in pcts]
     col_widths[-1] = usable_table_width - sum(col_widths[:-1])
 
-    # Adjust if possible to compensate for collapsed columns
     collapsed = [(i, w) for i, w in enumerate(col_widths) if w - 2 < 2]
     extra = sorted(
         [(w, i) for i, w in enumerate(col_widths) if (i, w) not in collapsed],
@@ -136,7 +123,6 @@ def table(
         col_widths[i] = w + padding
         extra = sorted(extra, key=lambda x: x[0])
 
-    # Prepare the rows
     wrapped_cols = []
     for i, col in enumerate(columns):
         wrapped_cols.append([])
@@ -145,7 +131,6 @@ def table(
             wrapped, _ = _word_wrap_to_len(entry, col_widths[i] - 2)
             wrapped_cols[-1].append(wrapped)
 
-    # Go row-by-row and add to the output
     out = _make_hline(table_width)
     n_rows = max([len(col) for col in columns])
     for r in range(n_rows):
@@ -172,10 +157,6 @@ def table(
             out += _make_hline(table_width)
 
     return out
-
-
-## Impl ########################################################################
-
 
 def _printed_len(x: str) -> int:
     """Get the length of the given string with non-printed characters removed"""
