@@ -5,3 +5,4 @@ in a uinx terminal.
 
 # Local
 from . import color, shape, size
+from .refresh_printer import RefreshPrinter
