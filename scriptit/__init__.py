@@ -1,7 +1,13 @@
 """
-Scriptit is a collection of tools for writing interactive terminal applications
-in a uinx terminal.
+Scriptit: A collection of tools for writing interactive terminal applications.
 """
 
-# Local
-from . import color, shape, size
+__version__ = "1.0.0"
+
+# Import submodules
+from . import color
+from . import shape
+from . import size
+
+# Public API
+__all__ = ["color", "shape", "size"]
