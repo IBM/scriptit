@@ -1,13 +1,18 @@
-"""
-Scriptit: A collection of tools for writing interactive terminal applications.
-"""
+from scriptit import color, shape, size, RefreshPrinter
 
-__version__ = "1.0.0"
+# Example usage of color module
+print(color.colorize("Hello, Scriptit!", color.Colors.green))
 
-# Import submodules
-from . import color
-from . import shape
-from . import size
+# Example usage of shape module
+shape.draw_rectangle(10, 5)
 
-# Public API
-__all__ = ["color", "shape", "size"]
+# Example usage of size module
+print(size.to_hr(1024))
+
+# Example usage of RefreshPrinter
+p = RefreshPrinter()
+for i in range(100):
+    p.add("Dummy Report:")
+    p.add("    iteration: " + str(i))
+    p.refresh()
+    time.sleep(1)
