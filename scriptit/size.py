@@ -10,11 +10,12 @@ import re
 ## Constants ###################################################################
 
 ## Default list of units
-DEFAULT_UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB"]
+DEFAULT_UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+OVERFLOW_UNIT = "YB"
 
 ## Functions ###################################################################
 
-## Get the human readable version of a size
+
 def to_hr(num_bytes: int, units: Optional[List[str]] = None) -> str:
     """Get the human readable version of a size in bytes
 
@@ -31,11 +32,11 @@ def to_hr(num_bytes: int, units: Optional[List[str]] = None) -> str:
     if units is None:
         units = DEFAULT_UNITS
     fmt_num = float(num_bytes)
-    for unit in units:
+    for unit in units[:-1]:
         if abs(fmt_num) < 1024.0:
             return "{:3.1f}{}".format(fmt_num, unit)
         fmt_num /= 1024.0
-    return "{:.1f}{}".format(fmt_num, "YB")
+    return "{:.1f}{}".format(fmt_num, units[-1])
 
 
 def from_hr(hr_size: str, units: Optional[List[str]] = None) -> int:
@@ -51,8 +52,7 @@ def from_hr(hr_size: str, units: Optional[List[str]] = None) -> int:
     assert isinstance(
         hr_size, str
     ), "Can only convert from string human readable to bytes"
-    if units is None:
-        units = DEFAULT_UNITS
+    units = units or DEFAULT_UNITS
     for i, unit in enumerate(units):
         m = re.match("(\d*\.?\d*)" + unit, hr_size)
         if m:
