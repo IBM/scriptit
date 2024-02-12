@@ -49,9 +49,11 @@ def progress_bar(
     Returns:
         progress_bar_str (str): String for the progress bar
     """
-    assert len(done_char) == 1
-    assert len(undone_char) == 1
-    assert len(head_char) == 1
+    if len(done_char) != 1 or len(undone_char) != 1 or len(head_char) != 1:
+        raise ValueError("All char args must have length 1")
+    # Flatten to [0, 1]. This is done instead of raising since this may be
+    # computed and should not break
+    complete_pct = max(min(1.0, complete_pct), 0.0)
     if width is None:
         width = shutil.get_terminal_size().columns
     n_done = int((width - 3) * complete_pct)
