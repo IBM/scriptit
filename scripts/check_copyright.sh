@@ -22,6 +22,10 @@ cd $(dirname ${BASH_SOURCE[0]})/..
 # Function helper to check and optionally fix headers
 function check_file {
     fname=$1
+    if git check-ignore -q $fname
+    then
+        return 0
+    fi
     second_line=$(cat $fname | head -n2 | tail -n1)
     if [ "$second_line" != "# Copyright The Script It Authors" ]
     then
