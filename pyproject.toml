@@ -23,7 +23,7 @@ dev-test = [
 
 dev-fmt = [
     "pre-commit>=3.0.4,<4.0",
-    "ruff==0.2.0",
+    "ruff==0.2.1",
 ]
 
 dev-build = [
