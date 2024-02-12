@@ -17,3 +17,9 @@ repos:
         name: ruff
         entry: scripts/lint.sh
         language: script
+  - repo: local
+    hooks:
+      - id: copyright-check
+        name: copyright
+        entry: scripts/check_copyright.sh
+        language: script
