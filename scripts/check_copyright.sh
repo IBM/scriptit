@@ -19,25 +19,17 @@ notice='########################################################################
 # Run from the root of the project
 cd $(dirname ${BASH_SOURCE[0]})/..
 
-# Set FIX=1 in the env to fix missing headers
-fix=${FIX:-"0"}
-
 # Function helper to check and optionally fix headers
 function check_file {
     fname=$1
     second_line=$(cat $fname | head -n2 | tail -n1)
     if [ "$second_line" != "# Copyright The Script It Authors" ]
     then
-        if [ "$fix" == "1" ]
-        then
-            echo "Fixing missing copyright in $fname"
-            file_content=$(cat $fname)
-            echo "$notice" > $fname
-            echo "$file_content" >> $fname
-        else
-            echo "Found missing copyright in $fname"
-            return 1
-        fi
+        echo "Fixing missing copyright in $fname"
+        file_content=$(cat $fname)
+        echo "$notice" > $fname
+        echo "$file_content" >> $fname
+        return 1
     fi
 }
 
@@ -46,9 +38,6 @@ for fname in $(find scriptit -name "*.py")
 do
     check_file $fname
     file_exit_code=$?
-    if [ "$file_exit_code" != "0" ]
-    then
-        exit_code=$(expr "$exit_code" "+" "$file_exit_code")
-    fi
+    exit_code=$(expr "$exit_code" "+" "$file_exit_code")
 done
 exit $exit_code
