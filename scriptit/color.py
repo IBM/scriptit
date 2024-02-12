@@ -19,74 +19,74 @@ Utilities for working with a terminal
 
 # Standard
 from enum import Enum
-from typing import Union
+from typing import Dict, Union
 
 ## Public ######################################################################
 
 
 class Colors(Enum):
-    black = "black"
-    dark_gray = "dark_gray"
-    red = "red"
-    light_red = "light_red"
-    green = "green"
-    light_green = "light_green"
-    brown = "brown"
-    orange = "orange"
-    yellow = "yellow"
-    blue = "blue"
-    light_blue = "light_blue"
-    purple = "purple"
-    light_purple = "light_purple"
-    cyan = "cyan"
-    light_cyan = "light_cyan"
-    light_gray = "light_gray"
-    white = "white"
+    BLACK = "black"
+    DARK_GRAY = "dark_gray"
+    RED = "red"
+    LIGHT_RED = "light_red"
+    GREEN = "green"
+    LIGHT_GREEN = "light_green"
+    BROWN = "brown"
+    ORANGE = "orange"
+    YELLOW = "yellow"
+    BLUE = "blue"
+    LIGHT_BLUE = "light_blue"
+    PURPLE = "purple"
+    LIGHT_PURPLE = "light_purple"
+    CYAN = "cyan"
+    LIGHT_CYAN = "light_cyan"
+    LIGHT_GRAY = "light_gray"
+    WHITE = "white"
 
 
 ## Mapping from color name to ansi escape code for foreground color
-FG_COLOR_CODES = {
-    Colors.black: "0;30",
-    Colors.dark_gray: "1;30",
-    Colors.red: "0;31",
-    Colors.light_red: "1;31",
-    Colors.green: "0;32",
-    Colors.light_green: "1;32",
-    Colors.brown: "0;33",
-    Colors.orange: "0;33",
-    Colors.yellow: "1;33",
-    Colors.blue: "0;34",
-    Colors.light_blue: "1;34",
-    Colors.purple: "0;35",
-    Colors.light_purple: "1;35",
-    Colors.cyan: "0;36",
-    Colors.light_cyan: "1;36",
-    Colors.light_gray: "0;37",
-    Colors.white: "1;37",
+FG_COLOR_CODES: Dict[Union[Colors, str], str] = {
+    Colors.BLACK: "0;30",
+    Colors.DARK_GRAY: "1;30",
+    Colors.RED: "0;31",
+    Colors.LIGHT_RED: "1;31",
+    Colors.GREEN: "0;32",
+    Colors.LIGHT_GREEN: "1;32",
+    Colors.BROWN: "0;33",
+    Colors.ORANGE: "0;33",
+    Colors.YELLOW: "1;33",
+    Colors.BLUE: "0;34",
+    Colors.LIGHT_BLUE: "1;34",
+    Colors.PURPLE: "0;35",
+    Colors.LIGHT_PURPLE: "1;35",
+    Colors.CYAN: "0;36",
+    Colors.LIGHT_CYAN: "1;36",
+    Colors.LIGHT_GRAY: "0;37",
+    Colors.WHITE: "1;37",
 }
-FG_COLOR_CODES.update(**{key.value: val for key, val in FG_COLOR_CODES.items()})
+FG_COLOR_CODES.update(**{entry.value: FG_COLOR_CODES[entry] for entry in Colors})
 
 ## Mapping from color name to ansi escape code for background color
-BG_COLOR_CODES = {
-    Colors.black: "0;40",
-    Colors.dark_gray: "1;40",
-    Colors.red: "0;41",
-    Colors.light_red: "1;41",
-    Colors.green: "0;42",
-    Colors.light_green: "1;42",
-    Colors.brown: "0;43",
-    Colors.orange: "0;43",
-    Colors.yellow: "1;43",
-    Colors.blue: "0;44",
-    Colors.light_blue: "1;44",
-    Colors.purple: "0;45",
-    Colors.light_purple: "1;45",
-    Colors.cyan: "0;46",
-    Colors.light_cyan: "1;46",
-    Colors.light_gray: "0;47",
-    Colors.white: "1;47",
+BG_COLOR_CODES: Dict[Union[Colors, str], str] = {
+    Colors.BLACK: "0;40",
+    Colors.DARK_GRAY: "1;40",
+    Colors.RED: "0;41",
+    Colors.LIGHT_RED: "1;41",
+    Colors.GREEN: "0;42",
+    Colors.LIGHT_GREEN: "1;42",
+    Colors.BROWN: "0;43",
+    Colors.ORANGE: "0;43",
+    Colors.YELLOW: "1;43",
+    Colors.BLUE: "0;44",
+    Colors.LIGHT_BLUE: "1;44",
+    Colors.PURPLE: "0;45",
+    Colors.LIGHT_PURPLE: "1;45",
+    Colors.CYAN: "0;46",
+    Colors.LIGHT_CYAN: "1;46",
+    Colors.LIGHT_GRAY: "0;47",
+    Colors.WHITE: "1;47",
 }
-BG_COLOR_CODES.update(**{key.value: val for key, val in BG_COLOR_CODES.items()})
+BG_COLOR_CODES.update(**{entry.value: BG_COLOR_CODES[entry] for entry in Colors})
 
 COLOR_START = "\033["
 COLOR_END = "\033[0m"
@@ -102,8 +102,7 @@ def colorize(x: str, color: Union[Colors, str]) -> str:
     Returns:
         x_color (str): The input string with color applied
     """
-    assert color in FG_COLOR_CODES
-    return f"{COLOR_START}{FG_COLOR_CODES[color]}m{x}{COLOR_END}"
+    return _apply_color(x, color, FG_COLOR_CODES)
 
 
 def bg_colorize(x: str, color: Union[Colors, str]) -> str:
@@ -116,8 +115,7 @@ def bg_colorize(x: str, color: Union[Colors, str]) -> str:
     Returns:
         x_color (str): The input string with color applied
     """
-    assert color in BG_COLOR_CODES
-    return f"{COLOR_START}{BG_COLOR_CODES[color]}m{x}{COLOR_END}"
+    return _apply_color(x, color, BG_COLOR_CODES)
 
 
 def decolorize(x: str) -> str:
@@ -135,3 +133,17 @@ def decolorize(x: str) -> str:
     x = x.replace(COLOR_END, "")
     x = x.replace("0m", "")  # TODO: Make this not prone to removing "1.0mb"
     return x
+
+
+## Impl ########################################################################
+
+
+def _apply_color(
+    x: str,
+    color: Union[Colors, str],
+    color_dict: Dict[Union[Colors, str], str],
+) -> str:
+    """Apply the color or raise a ValueError"""
+    if color_code := color_dict.get(color):
+        return f"{COLOR_START}{color_code}m{x}{COLOR_END}"
+    raise ValueError(f"Invalid color: {color}")
