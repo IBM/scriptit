@@ -111,6 +111,7 @@ class TerminalApp:
             HandlerWrapper,
             log_stream=self.log_stream,
             log_to_wrapped=preserve_log_handlers,
+            callback=self.refresh,
         )
 
         # Update all existing handlers
@@ -150,13 +151,6 @@ class TerminalApp:
         log_height = min(height - 1, log_height)
         max_log_lines = log_height - 2  # top/bottom frame
         content_height = height - log_height
-
-        self._log.debug(
-            "height: %d, log_height: %d, content_height: %d",
-            height,
-            log_height,
-            content_height,
-        )
 
         # Add the log console
         heading = "== CONSOLE "
@@ -226,6 +220,7 @@ class HandlerWrapper(logging.Handler):
         wrapped_handler: logging.Handler,
         log_stream: TextIO,
         log_to_wrapped: bool = False,
+        callback: Optional[Callable[[], None]] = None,
     ):
         """Set up with the handler to wrap
 
@@ -238,6 +233,7 @@ class HandlerWrapper(logging.Handler):
         self.wrapped_handler = wrapped_handler
         self.log_stream = log_stream
         self.log_to_wrapped = log_to_wrapped
+        self.callback = callback
         super().__init__()
 
         # Forward all handler methods to the wrapped handler except those
@@ -265,3 +261,5 @@ class HandlerWrapper(logging.Handler):
         self.log_stream.flush()
         if self.log_to_wrapped:
             self.wrapped_handler.emit(record)
+        if self.callback:
+            self.callback()
