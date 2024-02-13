@@ -116,6 +116,8 @@ class TerminalApp:
 
         # Update all existing handlers
         for logger in [logging.root] + list(logging.root.manager.loggerDict.values()):
+            if isinstance(logger, logging.PlaceHolder):
+                continue
             for i, handler in enumerate(logger.handlers):
                 logger.handlers[i] = make_wrapped_handler(handler)
 
