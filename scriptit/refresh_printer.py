@@ -38,6 +38,8 @@ import sys
 class RefreshPrinter:
     __doc__ = __doc__
 
+    UP_LINE = "\033[F"
+
     def __init__(
         self,
         do_refresh: bool = True,
@@ -90,7 +92,7 @@ class RefreshPrinter:
         width = shutil.get_terminal_size().columns
         if force or self.refresh_rate == 1 or self.refreshes % self.refresh_rate == 1:
             if self.do_refresh and self.last_report is not None and not self.mute:
-                line_clear = "\033[F" + " " * width
+                line_clear = self.UP_LINE + " " * width
                 self.write_stream.write(
                     line_clear * (len(self.last_report) + 1) + "\r\n"
                 )
