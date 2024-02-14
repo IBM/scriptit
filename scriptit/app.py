@@ -33,6 +33,8 @@ from .refresh_printer import RefreshPrinter
 class TerminalApp:
     __doc__ = __doc__
 
+    CONSOLE_START = "== CONSOLE "
+
     ## Construction ##############################################################
 
     def __init__(
@@ -77,7 +79,6 @@ class TerminalApp:
                 self.log_string_output, self.log_file_handle
             )
         self._wrap_all_logging(preserve_log_handlers)
-        self._log = logging.getLogger("APP")
 
         # Set up a buffer to store non-log lines in
         self.previous_content_entities = []
@@ -115,11 +116,19 @@ class TerminalApp:
         )
 
         # Update all existing handlers
+        # NOTE: The choice here to update _all_ handlers is based on the
+        #   assumption that a user will be unlikely to configure multiple
+        #   handlers when running a terminal app. If they do, log lines will end
+        #   up duplicated for each handler. The alternative is to attempt to
+        #   decide _which_ of the multiple handlers should be wrapped, but this
+        #   gets further complicated by needing to handle future handlers, so
+        #   the simpler choice is to just let this be a user problem.
         for logger in [logging.root] + list(logging.root.manager.loggerDict.values()):
             if isinstance(logger, logging.PlaceHolder):
                 continue
-            for i, handler in enumerate(logger.handlers):
-                logger.handlers[i] = make_wrapped_handler(handler)
+            if logger.handlers:
+                for i, handler in enumerate(logger.handlers):
+                    logger.handlers[i] = make_wrapped_handler(handler)
 
         # When new loggers are set up and have handlers directly configured,
         # intercept them and wrap the handlers
@@ -155,7 +164,7 @@ class TerminalApp:
         content_height = height - log_height
 
         # Add the log console
-        heading = "== CONSOLE "
+        heading = self.CONSOLE_START
         raw_log_lines = filter(
             lambda line: bool(line.strip()),
             self.log_string_output.getvalue().split("\n"),
@@ -166,6 +175,8 @@ class TerminalApp:
                 log_lines.append(line[:width])
                 line = line[width:]
             log_lines.append(line)
+        # DEBUG
+        print(log_lines)
         self.printer.add(heading + "=" * max(0, width - len(heading)))
         for line in log_lines[-max_log_lines:]:
             self.printer.add(line)
