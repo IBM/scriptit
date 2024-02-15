@@ -98,6 +98,10 @@ def table(
     min_width: Optional[int] = None,
     row_dividers: bool = True,
     header: bool = True,
+    hframe_char: str = "-",
+    vframe_char: str = "|",
+    corner_char: str = "+",
+    header_char: str = "=",
 ) -> str:
     """Encode the given columns as an ascii table
 
@@ -112,10 +116,22 @@ def table(
             computed width based on content
         row_dividers (bool): Include dividers between rows
         header (bool): Include a special divider between header and rows
+        hframe_char (str): Single character for horizontal frame lines
+        vframe_char (str): Single character for vertical frame lines
+        corner_char (str): Single character for corners
+        header_char (str): Single character for the header horizontal divider
 
     Returns:
         table (str): The formatted table string
     """
+    # Validate arguments
+    if any(
+        len(char) != 1 for char in [hframe_char, vframe_char, corner_char, header_char]
+    ):
+        raise ValueError("*_char args must be a single character")
+    if len(set([len(col) for col in columns])) > 1:
+        raise ValueError("All columns must have equal length")
+
     if max_width is None:
         max_width = shutil.get_terminal_size().columns
     if min_width is None:
@@ -123,6 +139,9 @@ def table(
 
     # Stringify all column content
     columns = [[str(val) for val in col] for col in columns]
+    empty_cols = [i for i, col in enumerate(columns) if not any(col)]
+    if empty_cols:
+        raise ValueError(f"Found empty column(s) when stringified: {empty_cols}")
 
     # Determine the raw max width of each column
     max_col_width = max_width - 3 - 2 * (len(columns) - 1)
@@ -138,33 +157,28 @@ def table(
     # For each column, determine the width as a percentage of the total width
     pcts = [float(w) / float(total_width) for w in widths]
     col_widths = [int(p * usable_table_width) + 3 for p in pcts]
-    col_widths[-1] = usable_table_width - sum(col_widths[:-1])
-
-    # Adjust if possible to compensate for collapsed columns
-    collapsed = [(i, w) for i, w in enumerate(col_widths) if w - 2 < 2]
-    extra = sorted(
-        [(w, i) for i, w in enumerate(col_widths) if (i, w) not in collapsed],
-        key=lambda x: x[0],
-    )
-    for (i, w) in collapsed:
-        assert len(extra) > 0 and extra[0][0] - w > 2, "No extra to borrow from"
-        padding = 2 - w
-        col_widths[extra[0][1]] = extra[0][0] - padding
-        col_widths[i] = w + padding
-        extra = sorted(extra, key=lambda x: x[0])
+    if col_widths:
+        col_widths[-1] = usable_table_width - sum(col_widths[:-1])
+    else:
+        col_widths = [0]
 
     # Prepare the rows
     wrapped_cols = []
     for i, col in enumerate(columns):
         wrapped_cols.append([])
         for entry in col:
-            assert col_widths[i] - 2 > 1, f"Column width collapsed for col {i}"
+            if col_widths[i] - 2 <= 1:
+                raise ValueError(f"Column width collapsed for col {i}")
             wrapped, _ = _word_wrap_to_len(entry, col_widths[i] - 2)
             wrapped_cols[-1].append(wrapped)
 
     # Go row-by-row and add to the output
-    out = _make_hline(table_width)
-    n_rows = max([len(col) for col in columns])
+    out = _make_hline(table_width, char=hframe_char, edge=corner_char)
+    n_rows = max([len(col) for col in columns]) if columns else 0
+    if not n_rows:
+        if header:
+            out += _make_hline(table_width, char=header_char, edge=vframe_char)
+        out += _make_hline(table_width, char=hframe_char, edge=corner_char)
     for r in range(n_rows):
         entries = [col[r] if r < len(col) else [""] for col in wrapped_cols]
         most_sublines = max([len(e) for e in entries])
@@ -172,21 +186,21 @@ def table(
             line = ""
             for c, entry in enumerate(entries):
                 val = entry[i] if len(entry) > i else ""
-                line += "| {}{}".format(
-                    val, " " * (col_widths[c] - _printed_len(val) - 2)
+                line += "{} {}{}".format(
+                    vframe_char, val, " " * (col_widths[c] - _printed_len(val) - 2)
                 )
-            line += "|\n"
+            line += f"{vframe_char}\n"
             out += line
         if r == 0:
             if header:
-                out += _make_hline(table_width, char="=", edge="|")
+                out += _make_hline(table_width, char=header_char, edge=vframe_char)
             elif row_dividers:
-                out += _make_hline(table_width, edge="|")
+                out += _make_hline(table_width, char=hframe_char, edge=vframe_char)
         elif r < n_rows - 1:
             if row_dividers:
-                out += _make_hline(table_width, edge="|")
+                out += _make_hline(table_width, char=hframe_char, edge=vframe_char)
         else:
-            out += _make_hline(table_width)
+            out += _make_hline(table_width, char=hframe_char, edge=corner_char)
 
     return out
 
@@ -211,8 +225,8 @@ def _word_wrap_to_len(line: str, max_len: int) -> Tuple[List[str], int]:
         sublines (List[str]): The lines wrapped to the target length
         longest (int): The length of the longest wrapped line (<= max_len)
     """
-    if _printed_len(line) <= max_len:
-        return [line], _printed_len(line)
+    if (printed_len := _printed_len(line)) <= max_len:
+        return [line], printed_len
     else:
         longest = 0
         sublines = []
@@ -231,12 +245,14 @@ def _word_wrap_to_len(line: str, max_len: int) -> Tuple[List[str], int]:
                         subline += words[0][:cutoff] + "- "
                         words[0] = words[0][cutoff:]
                 else:
-                    break
+                    # NOTE: This _is_ covered in tests, but the coverage engine
+                    #   doesn't pick it up for some reason!
+                    break  # pragma: no cover
             subline = subline[:-1]
             longest = max(longest, _printed_len(subline))
             sublines.append(subline)
         return sublines, longest
 
 
-def _make_hline(table_width: int, char: str = "-", edge: str = "+") -> str:
+def _make_hline(table_width: int, char: str, edge: str) -> str:
     return "{}{}{}\n".format(edge, char * (table_width - 2), edge)
