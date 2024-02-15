@@ -33,6 +33,8 @@ from .refresh_printer import RefreshPrinter
 class TerminalApp:
     __doc__ = __doc__
 
+    CONSOLE_START = "== CONSOLE "
+
     ## Construction ##############################################################
 
     def __init__(
@@ -77,7 +79,6 @@ class TerminalApp:
                 self.log_string_output, self.log_file_handle
             )
         self._wrap_all_logging(preserve_log_handlers)
-        self._log = logging.getLogger("APP")
 
         # Set up a buffer to store non-log lines in
         self.previous_content_entities = []
@@ -111,12 +112,23 @@ class TerminalApp:
             HandlerWrapper,
             log_stream=self.log_stream,
             log_to_wrapped=preserve_log_handlers,
+            callback=self.refresh,
         )
 
         # Update all existing handlers
+        # NOTE: The choice here to update _all_ handlers is based on the
+        #   assumption that a user will be unlikely to configure multiple
+        #   handlers when running a terminal app. If they do, log lines will end
+        #   up duplicated for each handler. The alternative is to attempt to
+        #   decide _which_ of the multiple handlers should be wrapped, but this
+        #   gets further complicated by needing to handle future handlers, so
+        #   the simpler choice is to just let this be a user problem.
         for logger in [logging.root] + list(logging.root.manager.loggerDict.values()):
-            for i, handler in enumerate(logger.handlers):
-                logger.handlers[i] = make_wrapped_handler(handler)
+            if isinstance(logger, logging.PlaceHolder):
+                continue
+            if logger.handlers:
+                for i, handler in enumerate(logger.handlers):
+                    logger.handlers[i] = make_wrapped_handler(handler)
 
         # When new loggers are set up and have handlers directly configured,
         # intercept them and wrap the handlers
@@ -151,15 +163,8 @@ class TerminalApp:
         max_log_lines = log_height - 2  # top/bottom frame
         content_height = height - log_height
 
-        self._log.debug(
-            "height: %d, log_height: %d, content_height: %d",
-            height,
-            log_height,
-            content_height,
-        )
-
         # Add the log console
-        heading = "== CONSOLE "
+        heading = self.CONSOLE_START
         raw_log_lines = filter(
             lambda line: bool(line.strip()),
             self.log_string_output.getvalue().split("\n"),
@@ -170,6 +175,8 @@ class TerminalApp:
                 log_lines.append(line[:width])
                 line = line[width:]
             log_lines.append(line)
+        # DEBUG
+        print(log_lines)
         self.printer.add(heading + "=" * max(0, width - len(heading)))
         for line in log_lines[-max_log_lines:]:
             self.printer.add(line)
@@ -226,6 +233,7 @@ class HandlerWrapper(logging.Handler):
         wrapped_handler: logging.Handler,
         log_stream: TextIO,
         log_to_wrapped: bool = False,
+        callback: Optional[Callable[[], None]] = None,
     ):
         """Set up with the handler to wrap
 
@@ -238,6 +246,7 @@ class HandlerWrapper(logging.Handler):
         self.wrapped_handler = wrapped_handler
         self.log_stream = log_stream
         self.log_to_wrapped = log_to_wrapped
+        self.callback = callback
         super().__init__()
 
         # Forward all handler methods to the wrapped handler except those
@@ -265,3 +274,5 @@ class HandlerWrapper(logging.Handler):
         self.log_stream.flush()
         if self.log_to_wrapped:
             self.wrapped_handler.emit(record)
+        if self.callback:
+            self.callback()
