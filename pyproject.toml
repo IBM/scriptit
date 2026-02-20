@@ -33,7 +33,7 @@ dev-build = [
 
 # All dev together in one
 dev = [
-    "scriptit[dev-test, dev-fmt, dev-build]"
+    "script-it[dev-test, dev-fmt, dev-build]"
 ]
 
 [project.urls]
